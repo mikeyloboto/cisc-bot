@@ -10,6 +10,7 @@
 
 	<name>discbot</name>
 	<url>http://www.evilbas.com</url>
+	<packaging>war</packaging>
 
 	<parent>
 		<groupId>org.springframework.boot</groupId>
@@ -120,6 +121,7 @@
 	</dependencies>
 
 	<build>
+		<finalName>discbot</finalName>
 		<pluginManagement>			<!-- lock down plugins versions to avoid using Maven defaults (may be moved 
 				to parent pom) -->
 			<plugins>
