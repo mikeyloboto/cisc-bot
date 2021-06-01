@@ -10,7 +10,7 @@ import org.springframework.scheduling.annotation.EnableAsync;
 
 @Configuration
 @PropertySources({ @PropertySource("classpath:application.properties"),
-		@PropertySource("file:${APPLICATION_EXT_PROPERTIES}\\discgm-ws\\env.properties") })
+		@PropertySource("file:${APPLICATION_EXT_PROPERTIES}/discgm-ws/env.properties") })
 @MapperScan("com.evilbas.discgm")
 @EnableAsync
 public class ClientConfig {
