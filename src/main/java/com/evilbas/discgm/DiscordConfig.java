@@ -23,19 +23,16 @@ public class DiscordConfig {
     @Autowired
     private Environment env;
 
-    // @Bean
-    // public GatewayDiscordClient discordClient() {
-    // log.debug("init discord client");
-    // GatewayDiscordClient client =
-    // DiscordClientBuilder.create(env.getProperty("disc.token")).build().login()
-    // .block();
-    // client.getEventDispatcher().on(ReadyEvent.class).subscribe(event -> {
-    // final User self = event.getSelf();
-    // System.out.println(String.format("Logged in as %s#%s", self.getUsername(),
-    // self.getDiscriminator()));
-    // });
+    @Bean
+    public GatewayDiscordClient discordClient() {
+        log.debug("init discord client");
+        GatewayDiscordClient client = DiscordClientBuilder.create(env.getProperty("disc.token")).build().login()
+                .block();
 
-    // client.onDisconnect().block();
-    // return client;
-    // }
+        client.getEventDispatcher().on(ReadyEvent.class).subscribe(event -> {
+            final User self = event.getSelf();
+            log.info(String.format("Logged in as %s#%s", self.getUsername(), self.getDiscriminator()));
+        });
+        return client;
+    }
 }

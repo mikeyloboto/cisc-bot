@@ -14,52 +14,59 @@ import discord4j.core.object.entity.Message;
 import discord4j.core.object.entity.channel.Channel;
 
 import com.evilbas.discgm.discord.domain.MessageCommand;
+import com.evilbas.discgm.service.UserService;
 import com.evilbas.discgm.util.Constants;
+import com.evilbas.rslengine.player.Player;
 
 @Component
 public class CommandHandler {
 
 	private Map<String, MessageCommand> commands;
 
-	// @Autowired
-	// GatewayDiscordClient discordClient;
+	@Autowired
+	private UserService userService;
 
-	// @PostConstruct
-	// public void init() {
+	@Autowired
+	GatewayDiscordClient discordClient;
 
-	// discordClient.getEventDispatcher().on(MessageCreateEvent.class).subscribe(event
-	// -> {
-	// final String content = event.getMessage().getContent();
+	@PostConstruct
+	public void init() {
 
-	// for (final Map.Entry<String, MessageCommand> entry :
-	// getCommands().entrySet()) {
-	// if (content.startsWith(Constants.DISC_BOT_PREFIX + entry.getKey())) {
-	// entry.getValue().execute(event);
-	// break;
-	// }
-	// }
-	// });
+		discordClient.getEventDispatcher().on(MessageCreateEvent.class).subscribe(event -> {
+			final String content = event.getMessage().getContent();
 
-	// commands = new HashMap<String, MessageCommand>();
-	// commands.put("ping", event ->
-	// event.getMessage().getChannel().block().createMessage("Pong!").block());
-	// commands.put("status", event -> {
-	// if
-	// (event.getMessage().getChannel().block().getType().equals(Channel.Type.DM)) {
-	// Message messageRef =
-	// event.getMessage().getChannel().block().createMessage("Checking").block();
-	// messageRef.pin().block();
-	// }
-	// });
-	// commands.put("me", event -> {
-	// String sendingUser = event.getMessage().getAuthor().get().getUsername() + "#"
-	// + event.getMessage().getAuthor().get().getDiscriminator();
-	// event.getMessage().getChannel().block()
-	// .createMessage("<@" + event.getMessage().getAuthor().get().getId().asLong() +
-	// ">").block();
-	// });
+			// Check if it is first interaction
+			final Long playerId = event.getMessage().getAuthor().get().getId().asLong();
+			Player player = userService.loadUser(playerId);
 
-	// }
+			for (final Map.Entry<String, MessageCommand> entry : getCommands().entrySet()) {
+				if (content.startsWith(Constants.DISC_BOT_PREFIX + entry.getKey())) {
+					entry.getValue().execute(event);
+					break;
+				}
+			}
+		});
+
+		commands = new HashMap<String, MessageCommand>();
+		commands.put("ping", event -> event.getMessage().getChannel().block().createMessage("Pong!").block());
+		commands.put("start", event -> {
+
+			event.getMessage().getChannel().block().createMessage("Pong!").block();
+		});
+		commands.put("status", event -> {
+			if (event.getMessage().getChannel().block().getType().equals(Channel.Type.DM)) {
+				Message messageRef = event.getMessage().getChannel().block().createMessage("Checking").block();
+				messageRef.pin().block();
+			}
+		});
+		commands.put("me", event -> {
+			String sendingUser = event.getMessage().getAuthor().get().getUsername() + "#"
+					+ event.getMessage().getAuthor().get().getDiscriminator();
+			event.getMessage().getChannel().block()
+					.createMessage("<@" + event.getMessage().getAuthor().get().getId().asLong() + ">").block();
+		});
+
+	}
 
 	public Map<String, MessageCommand> getCommands() {
 		return commands;
