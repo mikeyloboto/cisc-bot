@@ -11,10 +11,11 @@ import org.apache.ibatis.annotations.Select;
 
 @Mapper
 public interface UserRepository {
-    @Select("SELECT * FROM players_ref WHERE player_id = ${playerId}")
-    @Results(value = { @Result(property = "playerId", column = "player_id") })
-    public Player getPlayerById(@Param("playerId") Long playerId);
+    @Select("SELECT * FROM players_ref WHERE player_disc_id = ${playerDiscId}")
+    @Results(value = { @Result(property = "playerId", column = "player_id"),
+            @Result(property = "playerDiscId", column = "player_disc_id") })
+    public Player getPlayerById(@Param("playerDiscId") Long playerDiscId);
 
-    @Insert("INSERT INTO players_ref (player_id) VALUES ($(player.playerId))")
+    @Insert("INSERT INTO players_ref (player_disc_id) VALUES (${player.playerDiscId})")
     public Player insertPlayer(@Param("player") Player player);
 }

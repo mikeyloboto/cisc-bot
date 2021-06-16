@@ -20,13 +20,15 @@ public class UserService {
 
     public Player loadUser(Long playerId) {
         Player player = userRepository.getPlayerById(playerId);
-        log.debug(player.toString());
 
         if (player == null) {
+            log.info("Creating new user {}", playerId);
             Player newPlayer = new Player(playerId);
-            userRepository.insertPlayer(player);
+            userRepository.insertPlayer(newPlayer);
             player = userRepository.getPlayerById(playerId);
         }
+
+        log.info("User login ID: {}", player.getPlayerDiscId());
 
         return player;
     }
