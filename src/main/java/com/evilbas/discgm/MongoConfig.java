@@ -1,7 +1,9 @@
 package com.evilbas.discgm;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
 import org.springframework.data.mongodb.config.AbstractMongoClientConfiguration;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.repository.config.EnableMongoRepositories;
@@ -15,6 +17,9 @@ import com.mongodb.client.MongoClients;
 @EnableMongoRepositories(basePackages = "com.evilbas.discgm.dao.mongo")
 public class MongoConfig extends AbstractMongoClientConfiguration {
 
+    @Autowired
+    Environment env;
+
     @Override
     protected String getDatabaseName() {
         return "rsl_game";
@@ -22,7 +27,7 @@ public class MongoConfig extends AbstractMongoClientConfiguration {
 
     @Override
     public MongoClient mongoClient() {
-        ConnectionString connectionString = new ConnectionString("mongodb://evilservice:27017/rsl_game");
+        ConnectionString connectionString = new ConnectionString(env.getProperty("mongo.db.url"));
         MongoClientSettings mongoClientSettings = MongoClientSettings.builder().applyConnectionString(connectionString)
                 .build();
 

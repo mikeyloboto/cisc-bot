@@ -26,7 +26,6 @@ public class App extends SpringBootServletInitializer {
     private static final Logger log = LoggerFactory.getLogger(App.class);
 
     public static void main(String[] args) {
-
         log.info("Starting DiscGM");
         SpringApplication.run(App.class, args);
     }
@@ -53,9 +52,10 @@ public class App extends SpringBootServletInitializer {
     @Primary
     public DataSource dataSource() {
         log.debug("building dataSource");
-        String driverClass = env.getProperty("sql.db.class");
-        String url = env.getProperty("sql.db.location");
-        return DataSourceBuilder.create().url(url).driverClassName(driverClass).build();
+
+        return DataSourceBuilder.create().url(env.getProperty("sql.db.location"))
+                .driverClassName(env.getProperty("sql.db.class")).username(env.getProperty("sql.db.username"))
+                .password(env.getProperty("sql.db.password")).build();
     }
 
 }
