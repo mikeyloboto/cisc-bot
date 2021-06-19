@@ -19,6 +19,7 @@ import discord4j.rest.util.Color;
 import com.evilbas.discgm.discord.domain.MessageCommand;
 import com.evilbas.discgm.service.CharacterService;
 import com.evilbas.discgm.service.UserService;
+import com.evilbas.discgm.util.CharacterUtils;
 import com.evilbas.discgm.util.Constants;
 import com.evilbas.rslengine.character.Character;
 import com.evilbas.rslengine.player.Player;
@@ -77,7 +78,7 @@ public class CommandHandler {
 			Long playerDiscId = event.getMessage().getAuthor().get().getId().asLong();
 			Integer playerId = userService.getPlayerId(playerDiscId);
 			Character character = characterService.getActiveCharacterForPlayer(playerId);
-
+			// Player player = userService.getPlayerState(playerDiscId);
 			Message statusMessageRef = event.getMessage().getChannel().block()
 					.createEmbed(spec -> spec.setColor(Color.BLUE).setAuthor("CISC Bot", "", "")
 							.setTitle(character.getCharacterName())
@@ -85,7 +86,8 @@ public class CommandHandler {
 									+ character.getCharacterExp())
 							.addField("Level", character.getCharacterLevel().toString(), true)
 							.addField("Exp", character.getCharacterExp().toString(), true)
-							.addField("Class", "Warlock", true).setTimestamp(Instant.now()))
+							.addField("Class", "Warlock", true).setTimestamp(Instant.now()).addField("Currently",
+									CharacterUtils.stateToDesciption(userService.getPlayerState(playerDiscId)), true))
 					.block();
 			// Message messageRef =
 			// event.getMessage().getChannel().block().createMessage("Checking").block();
