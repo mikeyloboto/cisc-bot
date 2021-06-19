@@ -1,9 +1,8 @@
 package com.evilbas.discgm.service;
 
-import java.util.List;
-
 import com.evilbas.discgm.dao.sql.UserRepository;
 import com.evilbas.rslengine.player.Player;
+import com.evilbas.rslengine.player.PlayerState;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,11 +25,22 @@ public class UserService {
             Player newPlayer = new Player(playerId);
             userRepository.insertPlayer(newPlayer);
             player = userRepository.getPlayerById(playerId);
+            userRepository.insertNewPlayerState(player.getPlayerId());
         }
 
         log.info("User login ID: {}", player.getPlayerDiscId());
 
         return player;
+    }
+
+    public PlayerState getPlayerState(Long playerId) {
+        Player player = userRepository.getPlayerById(playerId);
+        return userRepository.getPlayerState(player.getPlayerId());
+    }
+
+    public void updatePlayerState(Long playerId, PlayerState state) {
+        Player player = userRepository.getPlayerById(playerId);
+        userRepository.setPlayerState(player.getPlayerId(), state);
     }
 
 }
