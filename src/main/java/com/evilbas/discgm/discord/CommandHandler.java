@@ -87,7 +87,11 @@ public class CommandHandler {
 							.addField("Level", character.getCharacterLevel().toString(), true)
 							.addField("Exp", character.getCharacterExp().toString(), true)
 							.addField("Class", "Warlock", true).setTimestamp(Instant.now()).addField("Currently",
-									CharacterUtils.stateToDesciption(userService.getPlayerState(playerDiscId)), true))
+									CharacterUtils.stateToDesciption(userService.getPlayerState(playerDiscId))
+											+ ((userService.getPlayerState(playerDiscId) == PlayerState.COMBAT)
+													? " " + character.getCurrentEncounter().getCreatureSlot(0).getName()
+													: ""),
+									true))
 					.block();
 			// Message messageRef =
 			// event.getMessage().getChannel().block().createMessage("Checking").block();
