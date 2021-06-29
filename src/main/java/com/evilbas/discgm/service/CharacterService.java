@@ -32,8 +32,6 @@ public class CharacterService {
         log.info("chars: {}", mongoTemplate.findOne(query, Character.class, "characters"));
         Character character = mongoTemplate.findOne(query, Character.class, "characters");
 
-        // getCollection("characters").
-        // .findOne(new Query(where("characterGuid").is(guid)), Character.class);
         log.info("character: {}", character);
         return character;
     }
