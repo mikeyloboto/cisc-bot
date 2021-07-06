@@ -1,5 +1,5 @@
 package com.evilbas.discgm.domain;
 
 public enum KeyMessageType {
-    STATUS, COMBAT, INVENTORY, TRAVEL;
+    STATUS, COMBAT, INVENTORY, TRAVEL, CRAFTING;
 }

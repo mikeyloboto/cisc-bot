@@ -20,7 +20,9 @@ import discord4j.core.object.entity.channel.Channel;
 import discord4j.core.object.entity.channel.MessageChannel;
 import discord4j.core.object.reaction.ReactionEmoji;
 import discord4j.rest.util.Color;
+import reactor.core.publisher.Mono;
 
+import com.evilbas.discgm.client.ProcServerClient;
 import com.evilbas.discgm.dao.sql.KeyMessageMapper;
 import com.evilbas.discgm.discord.domain.MessageCommand;
 import com.evilbas.discgm.domain.KeyMessage;
@@ -30,6 +32,8 @@ import com.evilbas.discgm.service.UserService;
 import com.evilbas.discgm.util.CharacterUtils;
 import com.evilbas.discgm.util.Constants;
 import com.evilbas.rslengine.character.Character;
+import com.evilbas.rslengine.creature.Creature;
+import com.evilbas.rslengine.creature.Encounter;
 import com.evilbas.rslengine.player.Player;
 import com.evilbas.rslengine.player.PlayerState;
 
@@ -51,6 +55,9 @@ public class CommandHandler {
 
 	@Autowired
 	GatewayDiscordClient discordClient;
+
+	@Autowired
+	private ProcServerClient procServerClient;
 
 	@Value("${disc.self}")
 	private Long selfId;
@@ -95,6 +102,16 @@ public class CommandHandler {
 						case "🎒":
 							inventoryCommand(playerId, event.getMessage().block().getChannel().block());
 							break;
+						case "🛠️":
+							craftingCommand(playerId, event.getMessage().block().getChannel().block());
+							break;
+					}
+					break;
+				case COMBAT:
+					if (event.getEmoji().asUnicodeEmoji().get().getRaw().equals("⚔️")) {
+						// autoattack case
+						attackCommand(playerId, event.getMessage().block().getChannel().block(), null,
+								event.getMessage().block());
 					}
 					break;
 			}
@@ -113,7 +130,7 @@ public class CommandHandler {
 				Integer playerId = userService.getPlayerId(playerDiscId);
 				Character character = characterService.getActiveCharacterForPlayer(playerId);
 				Message statusMessageRef = event.getMessage().getChannel().block().createEmbed(spec -> spec
-						.setColor(Color.BLUE).setAuthor("CISC Bot", "", "").setTitle(character.getCharacterName())
+						.setColor(Color.BLUE).setAuthor("CISC Bot", "", "").setTitle("Status")
 						.setDescription("Level: " + character.getCharacterLevel() + "\n" + "Current Exp: "
 								+ character.getCharacterExp())
 						.addField("Level", character.getCharacterLevel().toString(), true)
@@ -130,20 +147,20 @@ public class CommandHandler {
 				statusMessageRef.addReaction(ReactionEmoji.unicode("🗺️")).block();
 				statusMessageRef.addReaction(ReactionEmoji.unicode("💰")).block();
 				statusMessageRef.addReaction(ReactionEmoji.unicode("🛠️")).block();
-				// statusMessageRef.pin().block();
 				keyMessageMapper.saveKeyMessage(
 						new KeyMessage(playerId, statusMessageRef.getId().asString(), KeyMessageType.STATUS));
 				log.info("Message: {}", statusMessageRef.getId().asString());
 			}
 		});
+
 		commands.put("me", event -> {
-			// String sendingUser = event.getMessage().getAuthor().get().getUsername() + "#"
-			// + event.getMessage().getAuthor().get().getDiscriminator();
 			event.getMessage().getChannel().block()
 					.createMessage("<@" + event.getMessage().getAuthor().get().getId().asLong() + ">").block();
 		});
+
 		commands.put("inventory", event -> {
 			Long playerId = event.getMessage().getAuthor().get().getId().asLong();
+			inventoryCommand(playerId, event.getMessage().getChannel().block());
 
 		});
 
@@ -151,6 +168,12 @@ public class CommandHandler {
 
 			Long playerId = event.getMessage().getAuthor().get().getId().asLong();
 			combatCommand(playerId, event.getMessage().getChannel().block());
+		});
+
+		commands.put("craft", event -> {
+
+			Long playerId = event.getMessage().getAuthor().get().getId().asLong();
+			craftingCommand(playerId, event.getMessage().getChannel().block());
 		});
 
 	}
@@ -162,11 +185,44 @@ public class CommandHandler {
 	private void combatCommand(Long playerDiscId, MessageChannel channel) {
 		Integer playerId = userService.getPlayerId(playerDiscId);
 		userService.updatePlayerState(playerDiscId, PlayerState.COMBAT);
+		Character character = characterService.getActiveCharacterForPlayer(playerId);
+		Encounter encounter = procServerClient
+				.retrieveEncounter(characterService.getActiveCharacterForPlayer(playerId).getCharacterGuid());
 
 		// TEMP
-		channel.createMessage(userService.getPlayerState(playerDiscId).toString()).block();
-		Message messageRef = channel.createMessage("Run Started").block();
-		keyMessageMapper.saveKeyMessage(new KeyMessage(playerId, messageRef.getId().asString(), KeyMessageType.COMBAT));
+		// channel.createMessage(userService.getPlayerState(playerDiscId).toString()).block();
+		// Message messageRef = channel.createMessage("Run Started " +
+		// encounter.getCreatureSlot(0)).block();
+
+		Mono<Message> combatMessageRefBuild = channel.createEmbed(spec -> {
+			spec.setColor(Color.BLUE).setAuthor("CISC Bot", "", "").setTitle("Combat")
+					.setDescription("Enemies: " + encounter.getCreatures().size() + "\n" + "Encounter Exp: "
+							+ encounter.getEncounterExp(character))
+					// .addField("Level", character.getCharacterLevel().toString(), true)
+					// .addField("Exp", character.getCharacterExp().toString(),
+					// true).addField("Class", "Warrior", true)
+					.setTimestamp(Instant.now());
+			for (Creature c : encounter.getCreatures()) {
+				spec.addField("Lvl " + c.getLevel() + " " + c.getName(), c.getCurrentHp() + "/" + c.getMaxHp(), false);
+			}
+		});
+
+		Message combatMessageRef = combatMessageRefBuild.block();
+		combatMessageRef.addReaction(ReactionEmoji.unicode("⚔️")).block();
+
+		keyMessageMapper
+				.saveKeyMessage(new KeyMessage(playerId, combatMessageRef.getId().asString(), KeyMessageType.COMBAT));
+	}
+
+	private void attackCommand(Long playerDiscId, MessageChannel channel, String attack, Message oldMessage) {
+		oldMessage.delete().block();
+		Integer playerId = userService.getPlayerId(playerDiscId);
+
+		// TODO: adjust spell slots
+		procServerClient.performAttack(characterService.getActiveCharacterForPlayer(playerId).getCharacterGuid(), 0, 0);
+
+		combatCommand(playerDiscId, channel);
+
 	}
 
 	private void inventoryCommand(Long playerDiscId, MessageChannel channel) {
@@ -178,5 +234,16 @@ public class CommandHandler {
 		Message messageRef = channel.createMessage("Inventory").block();
 		keyMessageMapper
 				.saveKeyMessage(new KeyMessage(playerId, messageRef.getId().asString(), KeyMessageType.INVENTORY));
+	}
+
+	private void craftingCommand(Long playerDiscId, MessageChannel channel) {
+
+		Integer playerId = userService.getPlayerId(playerDiscId);
+
+		userService.updatePlayerState(playerDiscId, PlayerState.CRAFTING);
+		channel.createMessage(userService.getPlayerState(playerDiscId).toString()).block();
+		Message messageRef = channel.createMessage("Crafting").block();
+		keyMessageMapper
+				.saveKeyMessage(new KeyMessage(playerId, messageRef.getId().asString(), KeyMessageType.CRAFTING));
 	}
 }
