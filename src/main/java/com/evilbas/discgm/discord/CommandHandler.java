@@ -76,6 +76,8 @@ public class CommandHandler {
 				return;
 			}
 
+			userService.loadUser(playerId, "Player");
+
 			for (final Map.Entry<String, MessageCommand> entry : getCommands().entrySet()) {
 				if (content.startsWith(Constants.DISC_BOT_PREFIX + entry.getKey())) {
 					entry.getValue().execute(event);
