@@ -126,31 +126,10 @@ public class CommandHandler {
 			event.getMessage().getChannel().block().createMessage("Pong!").block();
 		});
 		commands.put("status", event -> {
+
 			if (event.getMessage().getChannel().block().getType().equals(Channel.Type.DM)) {
 				Long playerDiscId = event.getMessage().getAuthor().get().getId().asLong();
-				Integer playerId = userService.getPlayerId(playerDiscId);
-				Character character = characterService.getActiveCharacterForPlayer(playerId);
-				Message statusMessageRef = event.getMessage().getChannel().block().createEmbed(spec -> spec
-						.setColor(Color.BLUE).setAuthor("CISC Bot", "", "").setTitle("Status")
-						.setDescription("Level: " + character.getCharacterLevel() + "\n" + "Current Exp: "
-								+ character.getCharacterExp())
-						.addField("Level", character.getCharacterLevel().toString(), true)
-						.addField("Exp", character.getCharacterExp().toString(), true)
-						.addField("Class", "Warrior", true).setTimestamp(Instant.now()).addField("Currently",
-								CharacterUtils.stateToDesciption(userService.getPlayerState(playerDiscId))
-										+ ((userService.getPlayerState(playerDiscId) == PlayerState.COMBAT)
-												? " " + character.getCurrentEncounter().getCreatureSlot(0).getName()
-												: ""),
-								true))
-						.block();
-				statusMessageRef.addReaction(ReactionEmoji.unicode("⚔️")).block();
-				statusMessageRef.addReaction(ReactionEmoji.unicode("🎒")).block();
-				statusMessageRef.addReaction(ReactionEmoji.unicode("🗺️")).block();
-				statusMessageRef.addReaction(ReactionEmoji.unicode("💰")).block();
-				statusMessageRef.addReaction(ReactionEmoji.unicode("🛠️")).block();
-				keyMessageMapper.saveKeyMessage(
-						new KeyMessage(playerId, statusMessageRef.getId().asString(), KeyMessageType.STATUS));
-				log.info("Message: {}", statusMessageRef.getId().asString());
+				statusCommand(playerDiscId, event.getMessage().getChannel().block());
 			}
 		});
 
@@ -191,18 +170,9 @@ public class CommandHandler {
 				.retrieveEncounter(characterService.getActiveCharacterForPlayer(playerId).getCharacterGuid());
 		Encounter encounter = actionResult.getEncounter();
 
-		// TEMP
-		// channel.createMessage(userService.getPlayerState(playerDiscId).toString()).block();
-		// Message messageRef = channel.createMessage("Run Started " +
-		// encounter.getCreatureSlot(0)).block();
-
 		Mono<Message> combatMessageRefBuild = channel.createEmbed(spec -> {
-			spec.setColor(Color.BLUE).setAuthor("CISC Bot", "", "").setTitle("Combat")
-					.setDescription("Enemies: " + encounter.getCreatures().size() + "\n" + "Encounter Exp: "
-							+ encounter.getEncounterExp(character))
-					// .addField("Level", character.getCharacterLevel().toString(), true)
-					// .addField("Exp", character.getCharacterExp().toString(),
-					// true).addField("Class", "Warrior", true)
+			spec.setColor(Color.BLUE).setAuthor("CISC Bot", "", "").setTitle("Combat").setDescription("Enemies: "
+					+ encounter.getCreatures().size() + "\n" + "Encounter Exp: " + encounter.getEncounterExp(character))
 					.setTimestamp(Instant.now());
 			for (Creature c : encounter.getCreatures()) {
 				spec.addField("Lvl " + c.getLevel() + " " + c.getName(), c.getCurrentHp() + "/" + c.getMaxHp(), false);
@@ -221,9 +191,14 @@ public class CommandHandler {
 		Integer playerId = userService.getPlayerId(playerDiscId);
 
 		// TODO: adjust spell slots
-		procServerClient.performAttack(characterService.getActiveCharacterForPlayer(playerId).getCharacterGuid(), 0, 0);
-
-		combatCommand(playerDiscId, channel);
+		CombatResultWrapper result = procServerClient
+				.performAttack(characterService.getActiveCharacterForPlayer(playerId).getCharacterGuid(), 0, 0);
+		channel.createMessage(result.getMessage()).block();
+		if (result.isFinished()) {
+			combatCommand(playerDiscId, channel);
+			userService.updatePlayerState(playerDiscId, PlayerState.IDLE);
+		} else
+			statusCommand(playerDiscId, channel);
 
 	}
 
@@ -247,5 +222,32 @@ public class CommandHandler {
 		Message messageRef = channel.createMessage("Crafting").block();
 		keyMessageMapper
 				.saveKeyMessage(new KeyMessage(playerId, messageRef.getId().asString(), KeyMessageType.CRAFTING));
+	}
+
+	private void statusCommand(Long playerDiscId, MessageChannel channel) {
+
+		Integer playerId = userService.getPlayerId(playerDiscId);
+		Character character = characterService.getActiveCharacterForPlayer(playerId);
+		Message statusMessageRef = channel.createEmbed(spec -> spec.setColor(Color.BLUE).setAuthor("CISC Bot", "", "")
+				.setTitle("Status")
+				.setDescription("Level: " + character.getCharacterLevel() + "\n" + "Current Exp: "
+						+ character.getCharacterExp())
+				.addField("Level", character.getCharacterLevel().toString(), true)
+				.addField("Exp", character.getCharacterExp().toString(), true).addField("Class", "Warrior", true)
+				.setTimestamp(Instant.now()).addField("Currently",
+						CharacterUtils.stateToDesciption(userService.getPlayerState(playerDiscId))
+								+ ((userService.getPlayerState(playerDiscId) == PlayerState.COMBAT)
+										? " " + character.getCurrentEncounter().getCreatureSlot(0).getName()
+										: ""),
+						true))
+				.block();
+		statusMessageRef.addReaction(ReactionEmoji.unicode("⚔️")).block();
+		statusMessageRef.addReaction(ReactionEmoji.unicode("🎒")).block();
+		statusMessageRef.addReaction(ReactionEmoji.unicode("🗺️")).block();
+		statusMessageRef.addReaction(ReactionEmoji.unicode("💰")).block();
+		statusMessageRef.addReaction(ReactionEmoji.unicode("🛠️")).block();
+		keyMessageMapper
+				.saveKeyMessage(new KeyMessage(playerId, statusMessageRef.getId().asString(), KeyMessageType.STATUS));
+		log.info("Message: {}", statusMessageRef.getId().asString());
 	}
 }
