@@ -34,7 +34,11 @@ import com.evilbas.discgm.util.Constants;
 import com.evilbas.rslengine.character.Character;
 import com.evilbas.rslengine.creature.Creature;
 import com.evilbas.rslengine.creature.Encounter;
+import com.evilbas.rslengine.item.Inventory;
+import com.evilbas.rslengine.item.ItemStack;
+import com.evilbas.rslengine.item.property.ItemRarity;
 import com.evilbas.rslengine.networking.CombatResultWrapper;
+import com.evilbas.rslengine.networking.InventoryInteractionWrapper;
 import com.evilbas.rslengine.player.Player;
 import com.evilbas.rslengine.player.PlayerState;
 
@@ -116,6 +120,10 @@ public class CommandHandler {
 						attackCommand(playerId, event.getMessage().block().getChannel().block(), null,
 								event.getMessage().block());
 					}
+					break;
+				case INVENTORY:
+					useItemCommand(playerId, event.getMessage().block().getChannel().block(), null,
+							event.getMessage().block(), event.getEmoji().asUnicodeEmoji().get().getRaw());
 					break;
 			}
 
@@ -205,15 +213,55 @@ public class CommandHandler {
 
 	}
 
+	private void useItemCommand(Long playerDiscId, MessageChannel channel, String attack, Message oldMessage,
+			String item) {
+		oldMessage.delete().block();
+		Integer playerId = userService.getPlayerId(playerDiscId);
+		InventoryInteractionWrapper result = procServerClient
+				.listInventory(characterService.getActiveCharacterForPlayer(playerId).getCharacterGuid());
+
+		Inventory inventory = result.getInventory();
+
+		boolean itemValid = false;
+		for (ItemStack i : inventory.getItems()) {
+			if (i.getItem().getIcon().equals(item))
+				itemValid = true;
+		}
+
+		if (itemValid) {
+			InventoryInteractionWrapper itemResult = procServerClient
+					.useItem(characterService.getActiveCharacterForPlayer(playerId).getCharacterGuid(), item);
+
+			channel.createMessage(item + " used.").block();
+		}
+
+		inventoryCommand(playerDiscId, channel);
+
+	}
+
 	private void inventoryCommand(Long playerDiscId, MessageChannel channel) {
 
 		Integer playerId = userService.getPlayerId(playerDiscId);
+		InventoryInteractionWrapper result = procServerClient
+				.listInventory(characterService.getActiveCharacterForPlayer(playerId).getCharacterGuid());
 
-		userService.updatePlayerState(playerDiscId, PlayerState.INVENTORY);
-		channel.createMessage(userService.getPlayerState(playerDiscId).toString()).block();
-		Message messageRef = channel.createMessage("Inventory").block();
-		keyMessageMapper
-				.saveKeyMessage(new KeyMessage(playerId, messageRef.getId().asString(), KeyMessageType.INVENTORY));
+		Inventory inventory = result.getInventory();
+
+		Mono<Message> inventoryMessageRefBuild = channel.createEmbed(spec -> {
+			spec.setColor(Color.BLUE).setAuthor("CISC Bot", "", "").setTitle("Inventory").setTimestamp(Instant.now());
+			for (ItemStack i : inventory.getItems()) {
+				spec.addField(i.getItem().getIcon() + " " + i.getItem().getName(), "Amount: " + i.getAmount().toString()
+						+ ". " + ItemRarity.toReadable(i.getItem().getRarity()) + " item.", false);
+			}
+		});
+
+		Message inventoryMessageRef = inventoryMessageRefBuild.block();
+		for (ItemStack i : inventory.getItems()) {
+			inventoryMessageRef.addReaction(ReactionEmoji.unicode(i.getItem().getIcon())).block();
+		}
+
+		keyMessageMapper.saveKeyMessage(
+				new KeyMessage(playerId, inventoryMessageRef.getId().asString(), KeyMessageType.INVENTORY));
 	}
 
 	private void craftingCommand(Long playerDiscId, MessageChannel channel) {
