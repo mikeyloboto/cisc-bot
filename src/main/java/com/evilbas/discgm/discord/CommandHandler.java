@@ -195,10 +195,11 @@ public class CommandHandler {
 				.performAttack(characterService.getActiveCharacterForPlayer(playerId).getCharacterGuid(), 0, 0);
 		channel.createMessage(result.getMessage()).block();
 		if (result.isFinished()) {
-			combatCommand(playerDiscId, channel);
 			userService.updatePlayerState(playerDiscId, PlayerState.IDLE);
-		} else
 			statusCommand(playerDiscId, channel);
+
+		} else
+			combatCommand(playerDiscId, channel);
 
 	}
 
