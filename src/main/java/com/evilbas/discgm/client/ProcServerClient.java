@@ -1,6 +1,7 @@
 package com.evilbas.discgm.client;
 
 import com.evilbas.rslengine.creature.Encounter;
+import com.evilbas.rslengine.networking.CombatResultWrapper;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -23,7 +24,7 @@ public class ProcServerClient {
     @Value("${proc.server.address}")
     private String serverUri;
 
-    public Encounter retrieveEncounter(String characterGuid) {
+    public CombatResultWrapper retrieveEncounter(String characterGuid) {
 
         HttpHeaders headers = new HttpHeaders();
         headers.set(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE);
@@ -33,15 +34,15 @@ public class ProcServerClient {
 
         HttpEntity<?> entity = new HttpEntity<>(headers);
 
-        ResponseEntity<Encounter> response = restTemplate.exchange(builder.toUriString(), HttpMethod.GET, entity,
-                Encounter.class);
+        ResponseEntity<CombatResultWrapper> response = restTemplate.exchange(builder.toUriString(), HttpMethod.GET,
+                entity, CombatResultWrapper.class);
         if (response.getStatusCode() == HttpStatus.OK) {
             return response.getBody();
         }
         return null;
     }
 
-    public Encounter performAttack(String characterGuid, Integer target, Integer spell) {
+    public CombatResultWrapper performAttack(String characterGuid, Integer target, Integer spell) {
 
         HttpHeaders headers = new HttpHeaders();
         headers.set(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE);
@@ -51,8 +52,8 @@ public class ProcServerClient {
 
         HttpEntity<?> entity = new HttpEntity<>(headers);
 
-        ResponseEntity<Encounter> response = restTemplate.exchange(builder.toUriString(), HttpMethod.GET, entity,
-                Encounter.class);
+        ResponseEntity<CombatResultWrapper> response = restTemplate.exchange(builder.toUriString(), HttpMethod.GET,
+                entity, CombatResultWrapper.class);
         if (response.getStatusCode() == HttpStatus.OK) {
             return response.getBody();
         }

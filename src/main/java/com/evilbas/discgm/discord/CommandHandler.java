@@ -34,6 +34,7 @@ import com.evilbas.discgm.util.Constants;
 import com.evilbas.rslengine.character.Character;
 import com.evilbas.rslengine.creature.Creature;
 import com.evilbas.rslengine.creature.Encounter;
+import com.evilbas.rslengine.networking.CombatResultWrapper;
 import com.evilbas.rslengine.player.Player;
 import com.evilbas.rslengine.player.PlayerState;
 
@@ -186,8 +187,9 @@ public class CommandHandler {
 		Integer playerId = userService.getPlayerId(playerDiscId);
 		userService.updatePlayerState(playerDiscId, PlayerState.COMBAT);
 		Character character = characterService.getActiveCharacterForPlayer(playerId);
-		Encounter encounter = procServerClient
+		CombatResultWrapper actionResult = procServerClient
 				.retrieveEncounter(characterService.getActiveCharacterForPlayer(playerId).getCharacterGuid());
+		Encounter encounter = actionResult.getEncounter();
 
 		// TEMP
 		// channel.createMessage(userService.getPlayerState(playerDiscId).toString()).block();
