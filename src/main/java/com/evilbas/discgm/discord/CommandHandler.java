@@ -229,6 +229,7 @@ public class CommandHandler {
 		}
 
 		if (itemValid) {
+			log.info("Using item {}", item);
 			InventoryInteractionWrapper itemResult = procServerClient
 					.useItem(characterService.getActiveCharacterForPlayer(playerId).getCharacterGuid(), item);
 

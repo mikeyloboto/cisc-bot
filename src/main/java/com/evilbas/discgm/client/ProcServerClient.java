@@ -4,6 +4,8 @@ import com.evilbas.rslengine.creature.Encounter;
 import com.evilbas.rslengine.networking.CombatResultWrapper;
 import com.evilbas.rslengine.networking.InventoryInteractionWrapper;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -18,6 +20,8 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 @Service
 public class ProcServerClient {
+
+    private static final Logger log = LoggerFactory.getLogger(ProcServerClient.class);
 
     @Autowired
     private RestTemplate restTemplate;
@@ -62,7 +66,7 @@ public class ProcServerClient {
     }
 
     public InventoryInteractionWrapper listInventory(String characterGuid) {
-
+        log.info("List inventory request");
         HttpHeaders headers = new HttpHeaders();
         headers.set(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE);
 
@@ -80,7 +84,7 @@ public class ProcServerClient {
     }
 
     public InventoryInteractionWrapper useItem(String characterGuid, String item) {
-
+        log.info("use item request");
         HttpHeaders headers = new HttpHeaders();
         headers.set(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE);
 
@@ -89,9 +93,12 @@ public class ProcServerClient {
 
         HttpEntity<?> entity = new HttpEntity<>(headers);
 
-        ResponseEntity<InventoryInteractionWrapper> response = restTemplate.exchange(builder.toUriString(),
+        ResponseEntity<InventoryInteractionWrapper> response = restTemplate.exchange(builder.build().toUriString(),
                 HttpMethod.GET, entity, InventoryInteractionWrapper.class);
+        log.info("Resp: {}", response);
+        log.info("Req: {}", builder.toUriString());
         if (response.getStatusCode() == HttpStatus.OK) {
+            log.info("Body: {}", response.getBody().getInventory());
             return response.getBody();
         }
         return null;

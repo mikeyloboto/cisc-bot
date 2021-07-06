@@ -1,5 +1,6 @@
 package com.evilbas.discgm;
 
+import java.nio.charset.Charset;
 import java.util.Collections;
 
 import javax.sql.DataSource;
@@ -17,6 +18,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 import org.springframework.core.env.Environment;
 import org.springframework.http.MediaType;
+import org.springframework.http.converter.HttpMessageConverter;
+import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.web.client.RestTemplate;
 
@@ -45,6 +48,9 @@ public class App extends SpringBootServletInitializer {
         MappingJackson2HttpMessageConverter converter = new MappingJackson2HttpMessageConverter();
         converter.setSupportedMediaTypes(Collections.singletonList(MediaType.TEXT_HTML));
         restTemplate.getMessageConverters().add(converter);
+
+        HttpMessageConverter stringHttpMessageConverter = new StringHttpMessageConverter(Charset.forName("UTF-8"));
+        restTemplate.getMessageConverters().add(stringHttpMessageConverter);
         return restTemplate;
     }
 
