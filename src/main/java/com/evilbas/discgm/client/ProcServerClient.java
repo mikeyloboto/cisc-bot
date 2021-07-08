@@ -68,61 +68,33 @@ public class ProcServerClient {
     }
 
     public InventoryInteractionWrapper listInventory(String characterGuid) {
-        log.info("List inventory request");
-        HttpHeaders headers = new HttpHeaders();
-
         InventoryActionRequest request = new InventoryActionRequest();
         request.setGuid(characterGuid);
-
-        headers.set(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE);
-
-        UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(serverUri + "/inventory");
-
-        HttpEntity<?> entity = new HttpEntity<>(headers);
-
-        ResponseEntity<InventoryInteractionWrapper> response = restTemplate.exchange(builder.toUriString(),
-                HttpMethod.POST, entity, InventoryInteractionWrapper.class, request);
-        if (response.getStatusCode() == HttpStatus.OK) {
-            return response.getBody();
-        }
-        return null;
+        return (InventoryInteractionWrapper) sendToServer("/inventory", request, HttpMethod.POST);
     }
 
     public InventoryInteractionWrapper useItem(String characterGuid, String item) {
-        log.info("use item request");
-        HttpHeaders headers = new HttpHeaders();
-        headers.set(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE);
-
-        UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(serverUri + "/inventory/use");
-
         InventoryActionRequest request = new InventoryActionRequest();
         request.setGuid(characterGuid);
         request.setItem(item);
-
-        HttpEntity<?> entity = new HttpEntity<>(headers);
-
-        ResponseEntity<InventoryInteractionWrapper> response = restTemplate.exchange(builder.build().toUriString(),
-                HttpMethod.POST, entity, InventoryInteractionWrapper.class, request);
-        log.info("Resp: {}", response);
-        log.info("Req: {}", builder.toUriString());
-        if (response.getStatusCode() == HttpStatus.OK) {
-            log.info("Body: {}", response.getBody().getInventory());
-            return response.getBody();
-        }
-        return null;
+        return (InventoryInteractionWrapper) sendToServer("/inventory/use", request, HttpMethod.POST);
     }
 
-    private ResultWrapper sendToServer(String endpoint, Object requestBody, HttpMethod method, Class cl) {
-        log.info("use item request");
-        HttpHeaders headers = new HttpHeaders();
-        headers.set(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE);
+    private ResultWrapper sendToServer(String endpoint, Object requestBody, HttpMethod method) {
+        log.debug("Initiated backend call");
 
         UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(serverUri + endpoint);
 
-        HttpEntity<?> entity = new HttpEntity<>(headers);
+        ResponseEntity<InventoryInteractionWrapper> response = null;
 
-        ResponseEntity<ResultWrapper> response = restTemplate.exchange(builder.build().toUriString(), method, entity,
-                ResultWrapper.class, requestBody);
+        switch (method) {
+            case POST:
+                response = restTemplate.postForEntity(builder.toUriString(), requestBody,
+                        InventoryInteractionWrapper.class);
+                break;
+            case GET:
+                break;
+        }
         log.debug("Resp: {}", response);
         log.debug("Req: {}", builder.toUriString());
         if (response.getStatusCode() == HttpStatus.OK) {
