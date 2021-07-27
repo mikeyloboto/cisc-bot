@@ -108,6 +108,9 @@ public class CommandHandler {
 						case "🎒":
 							inventoryCommand(playerId, event.getMessage().block().getChannel().block());
 							break;
+						case "🔥":
+							spellbookCommand(playerId, event.getMessage().block().getChannel().block());
+							break;
 						case "🛠️":
 							craftingCommand(playerId, event.getMessage().block().getChannel().block());
 							break;
@@ -202,7 +205,8 @@ public class CommandHandler {
 		// TODO: adjust spell slots
 		CombatResultWrapper result = procServerClient
 				.performAttack(characterService.getActiveCharacterForPlayer(playerId).getCharacterGuid(), 0, 0);
-		channel.createMessage(result.getMessage()).block();
+		for (String m : result.getMessages())
+			channel.createMessage(m).block();
 		if (result.isFinished()) {
 			userService.updatePlayerState(playerDiscId, PlayerState.IDLE);
 			statusCommand(playerDiscId, channel);
@@ -264,6 +268,30 @@ public class CommandHandler {
 				new KeyMessage(playerId, inventoryMessageRef.getId().asString(), KeyMessageType.INVENTORY));
 	}
 
+	private void spellbookCommand(Long playerDiscId, MessageChannel channel) {
+		Integer playerId = userService.getPlayerId(playerDiscId);
+		InventoryInteractionWrapper result = procServerClient
+				.listInventory(characterService.getActiveCharacterForPlayer(playerId).getCharacterGuid());
+
+		Inventory inventory = result.getInventory();
+
+		Mono<Message> inventoryMessageRefBuild = channel.createEmbed(spec -> {
+			spec.setColor(Color.RED).setAuthor("CISC Bot", "", "").setTitle("Spellbook").setTimestamp(Instant.now());
+			for (ItemStack i : inventory.getItems()) {
+				spec.addField(i.getItem().getIcon() + " " + i.getItem().getName(), "MP: " + i.getAmount().toString()
+						+ ". " + ItemRarity.toReadable(i.getItem().getRarity()) + " spell.", false);
+			}
+		});
+
+		Message inventoryMessageRef = inventoryMessageRefBuild.block();
+		for (ItemStack i : inventory.getItems()) {
+			inventoryMessageRef.addReaction(ReactionEmoji.unicode(i.getItem().getIcon())).block();
+		}
+
+		keyMessageMapper.saveKeyMessage(
+				new KeyMessage(playerId, inventoryMessageRef.getId().asString(), KeyMessageType.SPELLBOOK));
+	}
+
 	private void craftingCommand(Long playerDiscId, MessageChannel channel) {
 
 		Integer playerId = userService.getPlayerId(playerDiscId);
@@ -294,7 +322,7 @@ public class CommandHandler {
 				.block();
 		statusMessageRef.addReaction(ReactionEmoji.unicode("⚔️")).block();
 		statusMessageRef.addReaction(ReactionEmoji.unicode("🎒")).block();
-		statusMessageRef.addReaction(ReactionEmoji.unicode("🗺️")).block();
+		statusMessageRef.addReaction(ReactionEmoji.unicode("🔥")).block();
 		statusMessageRef.addReaction(ReactionEmoji.unicode("💰")).block();
 		statusMessageRef.addReaction(ReactionEmoji.unicode("🛠️")).block();
 		keyMessageMapper
