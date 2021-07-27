@@ -39,7 +39,6 @@ import com.evilbas.rslengine.item.ItemStack;
 import com.evilbas.rslengine.item.property.ItemRarity;
 import com.evilbas.rslengine.networking.CombatResultWrapper;
 import com.evilbas.rslengine.networking.InventoryInteractionWrapper;
-import com.evilbas.rslengine.player.Player;
 import com.evilbas.rslengine.player.PlayerState;
 
 @Component
@@ -83,7 +82,7 @@ public class CommandHandler {
 			userService.loadUser(playerId, "Player");
 
 			for (final Map.Entry<String, MessageCommand> entry : getCommands().entrySet()) {
-				if (content.startsWith(Constants.DISC_BOT_PREFIX + entry.getKey())) {
+				if (content.toLowerCase().startsWith(Constants.DISC_BOT_PREFIX + entry.getKey())) {
 					entry.getValue().execute(event);
 					break;
 				}
