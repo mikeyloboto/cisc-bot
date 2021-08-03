@@ -2,10 +2,14 @@ package com.evilbas.discgm.util;
 
 import com.evilbas.rslengine.character.Character;
 import com.evilbas.rslengine.player.PlayerState;
+import com.evilbas.rslengine.util.CombatUtil;
 
 public class CharacterUtils {
     public static Character createBlankCharacter(String name) {
         Character character = new Character(name);
+        character.setEquippedWeapon(CombatUtil.generateStartingWeapon());
+        character.setEquippedArmor(CombatUtil.generateStartingArmor());
+
         return character;
     }
 
