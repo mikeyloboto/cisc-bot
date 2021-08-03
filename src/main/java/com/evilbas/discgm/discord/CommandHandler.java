@@ -19,6 +19,7 @@ import discord4j.core.object.entity.Message;
 import discord4j.core.object.entity.channel.Channel;
 import discord4j.core.object.entity.channel.MessageChannel;
 import discord4j.core.object.reaction.ReactionEmoji;
+import discord4j.core.spec.EmbedCreateSpec;
 import discord4j.rest.util.Color;
 import reactor.core.publisher.Mono;
 
@@ -34,6 +35,7 @@ import com.evilbas.discgm.util.Constants;
 import com.evilbas.rslengine.character.Character;
 import com.evilbas.rslengine.creature.Creature;
 import com.evilbas.rslengine.creature.Encounter;
+import com.evilbas.rslengine.damage.DamageModifier;
 import com.evilbas.rslengine.item.Inventory;
 import com.evilbas.rslengine.item.ItemStack;
 import com.evilbas.rslengine.item.property.ItemRarity;
@@ -79,7 +81,9 @@ public class CommandHandler {
 				return;
 			}
 
-			userService.loadUser(playerId, "Player");
+			String playerName = event.getMessage().getAuthor().get().getUsername();
+
+			userService.loadUser(playerId, playerName);
 
 			for (final Map.Entry<String, MessageCommand> entry : getCommands().entrySet()) {
 				if (content.toLowerCase().startsWith(Constants.DISC_BOT_PREFIX + entry.getKey())) {
@@ -130,6 +134,8 @@ public class CommandHandler {
 			}
 
 		});
+
+		// discordClient.getEventDispatcher().on()
 
 		commands = new HashMap<>();
 		commands.put("ping", event -> event.getMessage().getChannel().block().createMessage("Pong!").block());
@@ -307,19 +313,48 @@ public class CommandHandler {
 
 		Integer playerId = userService.getPlayerId(playerDiscId);
 		Character character = characterService.getActiveCharacterForPlayer(playerId);
-		Message statusMessageRef = channel.createEmbed(spec -> spec.setColor(Color.BLUE).setAuthor("CISC Bot", "", "")
-				.setTitle("Status")
-				.setDescription("Level: " + character.getCharacterLevel() + "\n" + "Current Exp: "
-						+ character.getCharacterExp())
-				.addField("Level", character.getCharacterLevel().toString(), true)
-				.addField("Exp", character.getCharacterExp().toString(), true).addField("Class", "Warrior", true)
-				.setTimestamp(Instant.now()).addField("Currently",
-						CharacterUtils.stateToDesciption(userService.getPlayerState(playerDiscId))
-								+ ((userService.getPlayerState(playerDiscId) == PlayerState.COMBAT)
-										? " " + character.getCurrentEncounter().getCreatureSlot(0).getName()
-										: ""),
-						true))
-				.block();
+		Message statusMessageRef = channel.createEmbed(spec -> {
+			spec.setColor(Color.BLUE).setAuthor("CISC Bot", "", "").setTitle("Status")
+					.setDescription("Level: " + character.getCharacterLevel() + "\n" + "Current Exp: "
+							+ character.getCharacterExp())
+					.addField("Level", character.getCharacterLevel().toString(), true)
+					.addField("Exp", character.getCharacterExp().toString(), true).addField("Class", "Warrior", true)
+					.addField("HP", character.getCurrentHp() + "/" + character.getMaxHp(), true)
+					.addField("MP", character.getMp() + "/" + character.getMaxMp(), true);
+			if (character.getEquippedWeapon() != null) {
+				String weaponInfo = character.getEquippedWeapon().getName() + "\nBase attack: "
+						+ character.getEquippedWeapon().getBaseDamage();
+				if (character.getEquippedWeapon().getModifiers() != null) {
+					for (DamageModifier mod : character.getEquippedWeapon().getModifiers()) {
+						weaponInfo += ("\n+" + mod.getAmount() + " " + mod.getDamageType().getReadableName(false)
+								+ " damage");
+					}
+				}
+				spec.addField("Equipped Weapon", weaponInfo, true);
+
+			}
+
+			if (character.getEquippedArmor() != null) {
+				String armorInfo = character.getEquippedArmor().getName() + "\nBase armor: "
+						+ character.getEquippedArmor().getBaseArmor();
+				if (character.getEquippedArmor().getModifiers() != null) {
+					for (DamageModifier mod : character.getEquippedArmor().getModifiers()) {
+						armorInfo += ("\n+" + mod.getAmount() + " " + mod.getDamageType().getReadableName(false)
+								+ " armor");
+					}
+				}
+				spec.addField("Equipped Armor", armorInfo, true);
+
+			}
+			spec.setTimestamp(Instant.now()).addField("Currently",
+					CharacterUtils.stateToDesciption(userService.getPlayerState(playerDiscId))
+							+ ((userService.getPlayerState(playerDiscId) == PlayerState.COMBAT)
+									? " " + character.getCurrentEncounter().getCreatureSlot(0).getName()
+									: ""),
+					true);
+		}).block();
+
+		// Message statusMessageRef = embedSpec.block();
 		statusMessageRef.addReaction(ReactionEmoji.unicode("⚔️")).block();
 		statusMessageRef.addReaction(ReactionEmoji.unicode("🎒")).block();
 		statusMessageRef.addReaction(ReactionEmoji.unicode("🔥")).block();
