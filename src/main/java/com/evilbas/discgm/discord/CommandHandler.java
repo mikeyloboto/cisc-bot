@@ -282,11 +282,9 @@ public class CommandHandler {
 			SpellbookInteractionWrapper spellResult = procServerClient
 					.useSpell(characterService.getActiveCharacterForPlayer(playerId).getCharacterGuid(), spell);
 
-			channel.createMessage(spell + " cast.").block();
 			if (spellResult.getMessages() != null)
 				for (String m : spellResult.getMessages()) {
 					channel.createMessage(m).block();
-
 				}
 		}
 
