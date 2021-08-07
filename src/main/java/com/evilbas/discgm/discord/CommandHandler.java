@@ -32,6 +32,8 @@ import com.evilbas.discgm.service.CharacterService;
 import com.evilbas.discgm.service.UserService;
 import com.evilbas.discgm.util.CharacterUtils;
 import com.evilbas.discgm.util.Constants;
+import com.evilbas.rslengine.ability.Spell;
+import com.evilbas.rslengine.ability.Spellbook;
 import com.evilbas.rslengine.character.Character;
 import com.evilbas.rslengine.creature.Creature;
 import com.evilbas.rslengine.creature.Encounter;
@@ -41,6 +43,7 @@ import com.evilbas.rslengine.item.ItemStack;
 import com.evilbas.rslengine.item.property.ItemRarity;
 import com.evilbas.rslengine.networking.CombatResultWrapper;
 import com.evilbas.rslengine.networking.InventoryInteractionWrapper;
+import com.evilbas.rslengine.networking.SpellbookInteractionWrapper;
 import com.evilbas.rslengine.player.PlayerState;
 
 @Component
@@ -129,6 +132,10 @@ public class CommandHandler {
 					break;
 				case INVENTORY:
 					useItemCommand(playerId, event.getMessage().block().getChannel().block(), null,
+							event.getMessage().block(), event.getEmoji().asUnicodeEmoji().get().getRaw());
+					break;
+				case SPELLBOOK:
+					useSpellCommand(playerId, event.getMessage().block().getChannel().block(), null,
 							event.getMessage().block(), event.getEmoji().asUnicodeEmoji().get().getRaw());
 					break;
 			}
@@ -243,10 +250,47 @@ public class CommandHandler {
 					.useItem(characterService.getActiveCharacterForPlayer(playerId).getCharacterGuid(), item);
 
 			channel.createMessage(item + " used.").block();
+
+			if (itemResult.getMessages() != null)
+				for (String m : itemResult.getMessages()) {
+					channel.createMessage(m).block();
+
+				}
 		}
 
 		inventoryCommand(playerDiscId, channel);
 
+	}
+
+	private void useSpellCommand(Long playerDiscId, MessageChannel channel, String attack, Message oldMessage,
+			String spell) {
+		oldMessage.delete().block();
+		Integer playerId = userService.getPlayerId(playerDiscId);
+		SpellbookInteractionWrapper result = procServerClient
+				.listSpellbook(characterService.getActiveCharacterForPlayer(playerId).getCharacterGuid());
+
+		Spellbook spellbook = result.getSpellbook();
+
+		boolean spellValid = false;
+		for (Spell i : spellbook.getSpells()) {
+			if (i.getIcon().equals(spell))
+				spellValid = true;
+		}
+
+		if (spellValid) {
+			log.info("Using spell {}", spell);
+			SpellbookInteractionWrapper spellResult = procServerClient
+					.useSpell(characterService.getActiveCharacterForPlayer(playerId).getCharacterGuid(), spell);
+
+			channel.createMessage(spell + " cast.").block();
+			if (spellResult.getMessages() != null)
+				for (String m : spellResult.getMessages()) {
+					channel.createMessage(m).block();
+
+				}
+		}
+
+		spellbookCommand(playerDiscId, channel);
 	}
 
 	private void inventoryCommand(Long playerDiscId, MessageChannel channel) {
@@ -276,22 +320,22 @@ public class CommandHandler {
 
 	private void spellbookCommand(Long playerDiscId, MessageChannel channel) {
 		Integer playerId = userService.getPlayerId(playerDiscId);
-		InventoryInteractionWrapper result = procServerClient
-				.listInventory(characterService.getActiveCharacterForPlayer(playerId).getCharacterGuid());
+		SpellbookInteractionWrapper result = procServerClient
+				.listSpellbook(characterService.getActiveCharacterForPlayer(playerId).getCharacterGuid());
 
-		Inventory inventory = result.getInventory();
+		Spellbook spellbook = result.getSpellbook();
 
 		Mono<Message> inventoryMessageRefBuild = channel.createEmbed(spec -> {
 			spec.setColor(Color.RED).setAuthor("CISC Bot", "", "").setTitle("Spellbook").setTimestamp(Instant.now());
-			for (ItemStack i : inventory.getItems()) {
-				spec.addField(i.getItem().getIcon() + " " + i.getItem().getName(), "MP: " + i.getAmount().toString()
-						+ ". " + ItemRarity.toReadable(i.getItem().getRarity()) + " spell.", false);
+			for (Spell i : spellbook.getSpells()) {
+				spec.addField(i.getIcon() + " " + i.getSpellName(),
+						"MP: " + i.getManaCost() + ".\n" + i.getDescription(), false);
 			}
 		});
 
 		Message inventoryMessageRef = inventoryMessageRefBuild.block();
-		for (ItemStack i : inventory.getItems()) {
-			inventoryMessageRef.addReaction(ReactionEmoji.unicode(i.getItem().getIcon())).block();
+		for (Spell i : spellbook.getSpells()) {
+			inventoryMessageRef.addReaction(ReactionEmoji.unicode(i.getIcon())).block();
 		}
 
 		keyMessageMapper.saveKeyMessage(
@@ -314,7 +358,7 @@ public class CommandHandler {
 		Integer playerId = userService.getPlayerId(playerDiscId);
 		Character character = characterService.getActiveCharacterForPlayer(playerId);
 		Message statusMessageRef = channel.createEmbed(spec -> {
-			spec.setColor(Color.BLUE).setAuthor("CISC Bot", "", "").setTitle("Status")
+			spec.setColor(Color.BLUE).setAuthor(character.getCharacterName(), "", "").setTitle("Status")
 					.setDescription("Level: " + character.getCharacterLevel() + "\n" + "Current Exp: "
 							+ character.getCharacterExp())
 					.addField("Level", character.getCharacterLevel().toString(), true)

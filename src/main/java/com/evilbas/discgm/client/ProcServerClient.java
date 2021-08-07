@@ -5,6 +5,8 @@ import com.evilbas.rslengine.networking.CombatResultWrapper;
 import com.evilbas.rslengine.networking.InventoryActionRequest;
 import com.evilbas.rslengine.networking.InventoryInteractionWrapper;
 import com.evilbas.rslengine.networking.ResultWrapper;
+import com.evilbas.rslengine.networking.SpellbookActionRequest;
+import com.evilbas.rslengine.networking.SpellbookInteractionWrapper;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -70,17 +72,30 @@ public class ProcServerClient {
     public InventoryInteractionWrapper listInventory(String characterGuid) {
         InventoryActionRequest request = new InventoryActionRequest();
         request.setGuid(characterGuid);
-        return (InventoryInteractionWrapper) sendToServer("/inventory", request, HttpMethod.POST);
+        return (InventoryInteractionWrapper) sendItemToServer("/inventory", request, HttpMethod.POST);
+    }
+
+    public SpellbookInteractionWrapper listSpellbook(String characterGuid) {
+        SpellbookActionRequest request = new SpellbookActionRequest();
+        request.setGuid(characterGuid);
+        return (SpellbookInteractionWrapper) sendSpellToServer("/spellbook", request, HttpMethod.POST);
     }
 
     public InventoryInteractionWrapper useItem(String characterGuid, String item) {
         InventoryActionRequest request = new InventoryActionRequest();
         request.setGuid(characterGuid);
         request.setItem(item);
-        return (InventoryInteractionWrapper) sendToServer("/inventory/use", request, HttpMethod.POST);
+        return (InventoryInteractionWrapper) sendItemToServer("/inventory/use", request, HttpMethod.POST);
     }
 
-    private ResultWrapper sendToServer(String endpoint, Object requestBody, HttpMethod method) {
+    public SpellbookInteractionWrapper useSpell(String characterGuid, String spell) {
+        SpellbookActionRequest request = new SpellbookActionRequest();
+        request.setGuid(characterGuid);
+        request.setSpell(spell);
+        return (SpellbookInteractionWrapper) sendSpellToServer("/spellbook/use", request, HttpMethod.POST);
+    }
+
+    private InventoryInteractionWrapper sendItemToServer(String endpoint, Object requestBody, HttpMethod method) {
         log.debug("Initiated backend call");
 
         UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(serverUri + endpoint);
@@ -95,8 +110,32 @@ public class ProcServerClient {
             case GET:
                 break;
         }
-        log.debug("Resp: {}", response);
-        log.debug("Req: {}", builder.toUriString());
+        log.info("Resp: {}", response);
+        log.info("Req: {}", builder.toUriString());
+        if (response.getStatusCode() == HttpStatus.OK) {
+            log.debug("Body: {}", response.getBody());
+            return response.getBody();
+        }
+        return null;
+    }
+
+    private SpellbookInteractionWrapper sendSpellToServer(String endpoint, Object requestBody, HttpMethod method) {
+        log.debug("Initiated backend call");
+
+        UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(serverUri + endpoint);
+
+        ResponseEntity<SpellbookInteractionWrapper> response = null;
+
+        switch (method) {
+            case POST:
+                response = restTemplate.postForEntity(builder.toUriString(), requestBody,
+                        SpellbookInteractionWrapper.class);
+                break;
+            case GET:
+                break;
+        }
+        log.info("Resp: {}", response.getBody().toString());
+        log.info("Req: {}", builder.toUriString());
         if (response.getStatusCode() == HttpStatus.OK) {
             log.debug("Body: {}", response.getBody());
             return response.getBody();
